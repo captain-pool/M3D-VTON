@@ -3,7 +3,8 @@ from torch.utils.tensorboard import SummaryWriter
 import os
 import time
 from . import util
-
+import wandb
+from models import base_model
 
 class Visualizer():
     """This class includes several functions that can display/save images and print/save logging information.
@@ -22,11 +23,14 @@ class Visualizer():
         """
         self.opt = opt  # cache the option
         self.use_tensorboard = not opt.no_tensorboard
+        self.use_wandb = opt.use_wandb
         self.win_size = opt.display_winsize
         self.name = opt.name
         self.saved = False
         self.ncols = opt.display_ncols
 
+        if self.use_wandb:
+          wandb.init(project="m3vton", entity="retail-demo", config=vars(opt))
 
         if self.use_tensorboard: # create board
             tensorboard_dir = os.path.join(opt.checkpoints_dir, opt.datamode, opt.name, 'tensorboard')
@@ -92,14 +96,30 @@ class Visualizer():
     def board_add_image(self, board, tag_name, img_tensor, step_count):
         tensor = self.tensor_for_board(img_tensor)
 
+        images = []
         for i, img in enumerate(tensor):
-            self.board.add_image('%s/%03d' % (tag_name, i), img, step_count)
+            caption = '%s/%03d' % (tag_name, i)
+            if self.use_tensorboard:
+                self.board.add_image(caption, img, step_count)
+            if self.use_wandb:
+                images.append(wandb.Image(img, caption=caption))
+
+        if self.use_wandb:
+            wandb.log({tag: images})
 
     def board_add_images(self, board, tag_name, img_tensors_list, step_count):
         tensor = self.tensor_list_for_board(img_tensors_list)
 
+        images = []
         for i, img in enumerate(tensor):
-            self.board.add_image('%s/%03d' % (tag_name, i), img, step_count)
+            caption = '%s/%03d' % (tag_name, i)
+            if self.use_tensorboard:
+                self.board.add_image(caption, img, step_count)
+            if self.use_wandb:
+                images.append(wandb.Image(img, caption=caption))
+
+        if self.use_wandb:
+            wandb.log({tag: images})
 
     def plot_current_losses(self, total_iters, losses):
         """display current losses in tensorboard
@@ -107,12 +127,18 @@ class Visualizer():
             total_iters (int)     -- current total iterations
             losses (OrderedDict)  -- training losses stored in the format of (name, float) pairs
             """
+        loss_names = map(lambda x: "loss/%s" % x, losses.keys())
+        losses = dict(zip(loss_names, losses.values()))
+
         if self.use_tensorboard:
             for loss_name, loss_value in losses.items():
-                self.board.add_scalar('Loss/'+loss_name, loss_value, total_iters)
+                self.board.add_scalar(loss_name, loss_value, total_iters)
             # add gpu usage info
             # self.board.add_scalar('gpu allocated', round(torch.cuda.memory_allocated(0)/1024**3,1), total_iters)
             # self.board.add_scalar('gpu reserved', round(torch.cuda.memory_reserved(0)/1024**3,1), total_iters)
+        elif self.use_wandb:
+            wandb.log(losses)
+
         else:
             print('Plot failed, you need set opt.no_tensorboard to False to plot current losses in tensorboard.')
 
@@ -134,3 +160,12 @@ class Visualizer():
         print(message)  # print the message
         with open(self.log_name, "a") as log_file:
             log_file.write('%s\n' % message)  # save the message
+
+    def watch(self, model):
+
+        assert isinstance(model, base_model.BaseModel)
+        assert self.use_wandb
+        models = []
+        for name in model.model_names:
+            models.append(getattr(model, "net" + name))
+        wandb.watch(models)

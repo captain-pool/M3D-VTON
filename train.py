@@ -48,7 +48,9 @@ if __name__ == '__main__':
     model = create_model(opt)      # create a model given opt.model and other options
     model.setup(opt)               # regular setup: load and print networks; create schedulers (if any)
     model.train()
-    
+    if opt.use_wandb:
+      visualizer.watch(model)
+
     total_iters = 0                # the total number of training iterations
     for epoch in range(opt.epoch_count, opt.n_epochs_keep + opt.n_epochs_decay + 1):    # outer loop for different epochs; we save the model by <epoch_count>, <epoch_count>+<save_latest_freq>
         epoch_start_time = time.time()  # timer for entire epoch

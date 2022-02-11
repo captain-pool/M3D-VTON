@@ -12,6 +12,7 @@ class TrainOptions(BaseOptions):
         
         # visualization parameters
         parser.add_argument('--no_tensorboard', action='store_true', help='if specifid, results will not be displayed on tensorboard')
+        parser.add_argument('--use_wandb', action='store_true', help='log metrics to wandb')
         parser.add_argument('--print_freq', type=int, default=100, help='frequency of showing training results on console')
         parser.add_argument('--display_epoch_freq', type=int, default=5, help='frequency of showing training results on screen at the end of epoches')
         parser.add_argument('--display_ncols', type=int, default=3, help='if positive, display all images in a single tensorboard panel with certain number of images per row.')
