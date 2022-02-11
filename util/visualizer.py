@@ -64,7 +64,7 @@ class Visualizer():
                     img_tensors.append(visual_tensors)
             img_tensors_list.append(img_tensors)
 
-            self.board_add_images(self.board, 'Visuals', img_tensors_list, total_iters)
+            self.board_add_images(getattr(self, "board", None), 'Visuals', img_tensors_list, total_iters)
 
     def tensor_for_board(self, img_tensor):
         # map into [0,1]
@@ -114,7 +114,7 @@ class Visualizer():
         for i, img in enumerate(tensor):
             caption = '%s/%03d' % (tag_name, i)
             if self.use_tensorboard:
-                self.board.add_image(caption, img, step_count)
+                board.add_image(caption, img, step_count)
             if self.use_wandb:
                 images.append(wandb.Image(img, caption=caption))
 
