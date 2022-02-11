@@ -47,6 +47,7 @@ class BaseOptions():
         parser.add_argument('--no_pin_memory', action='store_true', help='if specified, not pin data to memory')
         # additional parameters
         parser.add_argument('--epoch', type=str, default='latest', help='which epoch to load? set to latest to use latest cached model')
+        parser.add_argument('--expt_id', type=str, required=True, help='Experiment ID')
         parser.add_argument('--load_iter', type=int, default='0', help='which iteration to load? if load_iter > 0, the code will load models by iter_[load_iter]; otherwise, the code will load models by [epoch]')
         parser.add_argument('--display_winsize', type=int, default=512, help='display window size for HTML')
         parser.add_argument('--verbose', action='store_true', help='if specified, print more debugging information')

@@ -1,12 +1,16 @@
+import functools
 import numpy as np
 import PIL.Image as Image
 import os
 from tqdm import tqdm
 import cv2
 import argparse
+import wandb
 
+def log_to_wandb(run, key, data):
+  run.log({key: data})
 
-def depth2point(fd, bd, rgb, rgb_back, parse_shape=None, label='gt', out_fn=None):
+def depth2point(fd, bd, rgb, rgb_back, parse_shape=None, label='gt', out_fn=None, log_fn=None):
     if label=='gt':
         fd_m = (fd > 0).astype(np.float32)
         fd = -1.0 * (2.0 * fd - 1.0) # --> world
@@ -26,6 +30,8 @@ def depth2point(fd, bd, rgb, rgb_back, parse_shape=None, label='gt', out_fn=None
     else:
         print('ERROR: label must be gt/pred!')
     points = []
+    numpy_points = []
+
     for h in range(512):
         for w in range(320):
             if fd[h, w] == 0.: continue
@@ -46,6 +52,8 @@ def depth2point(fd, bd, rgb, rgb_back, parse_shape=None, label='gt', out_fn=None
             # Y = gly / 256.0 - 1.0 # [-1,1], Window --> World
             Y = (512 - 1 - h) / 256 - 1
             points.append("%f %f %f %d %d %d\n" % (X, Y, Z, color[0], color[1], color[2]))
+            numpy_points.append([X, Y, Z, color[0], color[1], color[2]])
+
     file = open(out_fn, "w")
     file.write('''ply
     format ascii 1.0
@@ -60,6 +68,10 @@ def depth2point(fd, bd, rgb, rgb_back, parse_shape=None, label='gt', out_fn=None
     %s
     ''' % (len(points), "".join(points)))
     file.close()
+
+    if callable(log_fn):
+        obj3d = wandb.Object3D(np.asarray(numpy_points))
+        log_fn(obj3d)
 
 
 def dilate_rgb(newdepth, pix):
@@ -88,6 +100,7 @@ if __name__ == '__main__':
     # parser.add_argument('--brgb_root', type=str, default='esults/aligned/TFM/test_pairs/tryon',help='path to the painted back rgb image')
     parser.add_argument('--parse_root', type=str, default='mpv3d_example/image-parse',help='path to the parsing image')
     parser.add_argument('--point_dst', type=str, default='results/aligned/pcd/test_pairs',help='path to output dir for point cloud')
+    parser.add_argument('--expt_id', type=str, required=True, help="Experiment ID")
     opt, _ = parser.parse_known_args()
 
     depth_list = sorted(os.listdir(opt.depth_root))
@@ -128,8 +141,9 @@ if __name__ == '__main__':
         # rgb_back = rgb_dilate
         rgb_back_dilate = dilate_rgb(rgb_back, 2)
         
-
-        depth2point(fd, bd, rgb, rgb_back, parse_shape=parse_shape, label='pred', out_fn=point_out_fn)
+        with wandb.init(entity="retail-demo", project="m3vton", config=vars(opt)) as run:
+            log_fn = functools.partial(log_to_wandb, run=run, key=fd_name)
+            depth2point(fd, bd, rgb, rgb_back, parse_shape=parse_shape, label='pred', out_fn=point_out_fn, log_fn=log_fn)
 
     print(f'The unprojected point cloud file(s) are saved to {opt.point_dst}')
     
