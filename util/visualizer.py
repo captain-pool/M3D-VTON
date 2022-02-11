@@ -52,7 +52,7 @@ class Visualizer():
             epoch (int) - - the current epoch
             total_iters (int) -- current total iterations
         """
-        if self.use_tensorboard:# display images in tensorboard
+        if self.use_tensorboard or self.use_wandb:# display images in tensorboard
             img_tensors = []
             img_tensors_list = []
             for visual_tensors in visuals.values():
