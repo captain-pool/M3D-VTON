@@ -119,7 +119,7 @@ class Visualizer():
                 images.append(wandb.Image(img, caption=caption))
 
         if self.use_wandb:
-            wandb.log({tag: images})
+            wandb.log({tag_name: images})
 
     def plot_current_losses(self, total_iters, losses):
         """display current losses in tensorboard
