@@ -166,7 +166,7 @@ class BaseModel(ABC):
 
         if self.opt.use_wandb:
             artifact = wandb.Artifact("trained_models", type="model")
-            artfact.add_dir(save_path)
+            artifact.add_dir(save_path)
             wandb.log_artifact(artifact)
 
     def load_networks(self, epoch):
