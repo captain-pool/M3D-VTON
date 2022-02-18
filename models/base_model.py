@@ -3,6 +3,7 @@ import torch
 from collections import OrderedDict
 from abc import ABC, abstractmethod
 from . import networks
+import wandb
 
 
 class BaseModel(ABC):
@@ -163,12 +164,22 @@ class BaseModel(ABC):
                 else:
                     torch.save(net.cpu().state_dict(), save_path)
 
+        if self.opt.use_wandb:
+            artifact = wandb.Artifact("trained_models", type="model")
+            artfact.add_dir(save_path)
+            wandb.log_artifact(artifact)
+
     def load_networks(self, epoch):
         """Load all the networks from the disk.
 
         Parameters:
             epoch (int) -- current epoch; used in the file name '%s_net_%s.pth' % (epoch, name)
         """
+
+        if self.opt.use_wandb:
+            artifact = wandb.run.use_artifact("trained_models:latest")
+            artifact.download(root=self.save_dir)
+
         for name in self.model_names:
             if isinstance(name, str):
                 load_filename = '%s_net_%s.pth' % (epoch, name)
