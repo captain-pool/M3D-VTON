@@ -193,7 +193,7 @@ class AlignedMPV3dDataset(BaseDataset):
         # im depth (back)
         if self.model == 'MTM' and self.isTrain:
             imbd = np.load(os.path.join(self.dataroot, 'depth', im_name.replace('front.png', 'back_depth.npy')))
-            imbd = np.flip(imbd, axis = 1) # align with imfd
+            imbd = np.flip(imbd, axis = 1).copy() # align with imfd
             imbd_m = (imbd > 0).astype(np.float32)
             imbd = 2 * imbd -1 # viewport -> ndc -> world
             imbd = imbd * imbd_m
@@ -201,7 +201,7 @@ class AlignedMPV3dDataset(BaseDataset):
             imbd_initial = ''
         elif self.model == 'DRM':
             imbd = np.load(os.path.join(self.dataroot, 'depth', im_name.replace('front.png', 'back_depth.npy')))
-            imbd = np.flip(imbd, axis = 1) # align with imfd
+            imbd = np.flip(imbd, axis = 1).copy() # align with imfd
 
             imbd_initial = np.load(os.path.join(self.warproot, 'initial-depth', im_name.replace('whole_front.png', 'initial_back_depth.npy')))
             imbd_initial = torch.from_numpy(imbd_initial).unsqueeze(0)
