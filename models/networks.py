@@ -68,6 +68,7 @@ class Sobel(nn.Module):
 
     def forward(self, x):
         """x: depth map (batch_size,1,H,W)"""
+        x = x.unsqueeze(1)
         out = self.edge_conv(x) 
         out = out.contiguous().view(-1, 2, x.size(2), x.size(3))
   
