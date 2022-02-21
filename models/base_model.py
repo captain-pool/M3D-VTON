@@ -40,6 +40,7 @@ class BaseModel(ABC):
         self.visual_names = []
         self.optimizers = []
         self.image_paths = []
+        self._model = opt.model
         self.metric = 0  # used for learning rate policy 'plateau'
 
     @staticmethod
@@ -165,7 +166,7 @@ class BaseModel(ABC):
                     torch.save(net.cpu().state_dict(), save_path)
 
         if self.opt.use_wandb:
-            artifact = wandb.Artifact("trained_models", type="model")
+            artifact = wandb.Artifact(f"{self._model}-trained_models", type="model")
             artifact.add_dir(self.save_dir)
             wandb.log_artifact(artifact)
 
