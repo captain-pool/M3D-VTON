@@ -183,7 +183,7 @@ class AlignedMPV3dDataset(BaseDataset):
             imfd = torch.from_numpy(imfd).unsqueeze(0)
             imfd_initial = ''
         elif self.model == 'DRM' or self.model == 'TFM':
-            imfd = ''
+            imfd = np.load(os.path.join(self.dataroot, 'depth', im_name.replace('.png', '_depth.npy')))
             imfd_initial = np.load(os.path.join(self.warproot, 'initial-depth', im_name.replace('whole_front.png', 'initial_front_depth.npy')))
             imfd_initial = torch.from_numpy(imfd_initial).unsqueeze(0)
         else:
