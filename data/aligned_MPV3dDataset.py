@@ -184,6 +184,10 @@ class AlignedMPV3dDataset(BaseDataset):
             imfd_initial = ''
         elif self.model == 'DRM' or self.model == 'TFM':
             imfd = np.load(os.path.join(self.dataroot, 'depth', im_name.replace('.png', '_depth.npy')))
+            imfd_m = (imfd > 0).astype(np.float32)
+            imfd = -1 * (2 * imfd -1) # viewport -> ndc -> world
+            imfd = imfd * imfd_m
+            imfd = torch.from_numpy(imfd).unsqueeze(0)
             imfd_initial = np.load(os.path.join(self.warproot, 'initial-depth', im_name.replace('whole_front.png', 'initial_front_depth.npy')))
             imfd_initial = torch.from_numpy(imfd_initial).unsqueeze(0)
         else:
@@ -202,6 +206,10 @@ class AlignedMPV3dDataset(BaseDataset):
         elif self.model == 'DRM':
             imbd = np.load(os.path.join(self.dataroot, 'depth', im_name.replace('front.png', 'back_depth.npy')))
             imbd = np.flip(imbd, axis = 1).copy() # align with imfd
+            imbd_m = (imbd > 0).astype(np.float32)
+            imbd = 2 * imbd -1 # viewport -> ndc -> world
+            imbd = imbd * imbd_m
+            imbd = torch.from_numpy(imbd).unsqueeze(0)
 
             imbd_initial = np.load(os.path.join(self.warproot, 'initial-depth', im_name.replace('whole_front.png', 'initial_back_depth.npy')))
             imbd_initial = torch.from_numpy(imbd_initial).unsqueeze(0)
