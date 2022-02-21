@@ -177,7 +177,8 @@ class BaseModel(ABC):
         """
 
         if self.opt.use_wandb:
-            artifact = wandb.run.use_artifact("trained_models:latest")
+            api = wandb.Api()
+            artifact = api.artifact("trained_models:latest")
             artifact.download(root=self.save_dir)
 
         for name in self.model_names:
