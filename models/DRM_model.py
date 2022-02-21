@@ -140,7 +140,6 @@ class DRMModel(BaseModel):
             self.c_sobelx = input['cloth_sobelx'].to(self.device)     # for input
             self.c_sobely = input['cloth_sobely'].to(self.device)     # for input
         if self.isTrain:
-            breakpoint()
             self.imfd = input['person_fdepth'].to(self.device)          # for ground truth
             self.imbd = input['person_bdepth'].to(self.device)          # for ground truth
             if self.use_grad_loss:
