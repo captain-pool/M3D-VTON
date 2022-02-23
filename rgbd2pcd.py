@@ -100,7 +100,6 @@ if __name__ == '__main__':
     # parser.add_argument('--brgb_root', type=str, default='esults/aligned/TFM/test_pairs/tryon',help='path to the painted back rgb image')
     parser.add_argument('--parse_root', type=str, default='mpv3d_example/image-parse',help='path to the parsing image')
     parser.add_argument('--point_dst', type=str, default='results/aligned/pcd/test_pairs',help='path to output dir for point cloud')
-    parser.add_argument('--expt_id', type=str, required=True, help="Experiment ID")
     opt, _ = parser.parse_known_args()
 
     depth_list = sorted(os.listdir(opt.depth_root))
