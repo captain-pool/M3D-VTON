@@ -7,10 +7,7 @@ import cv2
 import argparse
 import wandb
 
-def log_to_wandb(run, key, data):
-  run.log({key: data})
-
-def depth2point(fd, bd, rgb, rgb_back, parse_shape=None, label='gt', out_fn=None, log_fn=None):
+def depth2point(fd, bd, rgb, rgb_back, parse_shape=None, label='gt', out_fn=None):
     if label=='gt':
         fd_m = (fd > 0).astype(np.float32)
         fd = -1.0 * (2.0 * fd - 1.0) # --> world
@@ -69,10 +66,8 @@ def depth2point(fd, bd, rgb, rgb_back, parse_shape=None, label='gt', out_fn=None
     ''' % (len(points), "".join(points)))
     file.close()
 
-    if callable(log_fn):
-        obj3d = wandb.Object3D(np.asarray(numpy_points))
-        log_fn(data=obj3d)
-
+    obj3d = wandb.Object3D(np.asarray(numpy_points))
+    return obj3d
 
 def dilate_rgb(newdepth, pix):
     for _ in range(pix):
@@ -103,47 +98,69 @@ if __name__ == '__main__':
     opt, _ = parser.parse_known_args()
 
     depth_list = sorted(os.listdir(opt.depth_root))
-    with wandb.init(entity="retail-demo", project="m3vton", config=vars(opt)) as run:
+    name = pathlib.Path(opt.point_dst).resolve().name
+    dataroot = pathlib.Path(opt.parse_root).resolve().parent
+    datalist_file = dataroot / ("%s.txt" % name)
+    
+    filenames = dict()
+    with open(datalist_file, "r") as file:
+        for line in file:
+            im_name, c_name = line.strip().split()
+            key, _ = im_name.split("=")
+            filenames[key] = (dataroot / f"image/{im_name}",
+                              dataroot / f"cloth/{c_name}")
 
-      for fd_name in tqdm(depth_list):
-          if 'back' in fd_name: continue
-          bd_name = fd_name.replace('front_depth.npy', 'back_depth.npy')
-          frgb_name = fd_name.replace('_depth.npy', '.png')
-          # brgb_name = fd_name.replace('front_depth.npy', 'back.png')
-          parse_name = fd_name.replace('depth.npy', 'label.png')
-          fd_path = os.path.join(opt.depth_root, fd_name)
-          bd_path = os.path.join(opt.depth_root, bd_name)
-          frgb_path = os.path.join(opt.frgb_root, frgb_name)
-          # brgb_path = os.path.join(opt.brgb_root, brgb_name)
-          parse_path  = os.path.join(opt.parse_root, parse_name)
-          os.makedirs(opt.point_dst, exist_ok=True)
-          point_out_fn = os.path.join(opt.point_dst, fd_name.replace('_whole_front_depth.npy', '.ply'))
+      
+    rows = []
+    for fd_name in tqdm(depth_list):
+        if 'back' in fd_name: continue
+        bd_name = fd_name.replace('front_depth.npy', 'back_depth.npy')
+        frgb_name = fd_name.replace('_depth.npy', '.png')
+        # brgb_name = fd_name.replace('front_depth.npy', 'back.png')
+        parse_name = fd_name.replace('depth.npy', 'label.png')
+        fd_path = os.path.join(opt.depth_root, fd_name)
+        bd_path = os.path.join(opt.depth_root, bd_name)
+        frgb_path = os.path.join(opt.frgb_root, frgb_name)
+        # brgb_path = os.path.join(opt.brgb_root, brgb_name)
+        parse_path  = os.path.join(opt.parse_root, parse_name)
+        os.makedirs(opt.point_dst, exist_ok=True)
+        point_out_fn = os.path.join(opt.point_dst, fd_name.replace('_whole_front_depth.npy', '.ply'))
 
-          fd = np.load(fd_path)
-          fd = fd - 0.02
-          bd = np.load(bd_path)
-          rm_idx = (fd - bd) < 0
-          fd[rm_idx] = 0
-          bd[rm_idx] = 0
+        fd = np.load(fd_path)
+        fd = fd - 0.02
+        bd = np.load(bd_path)
+        rm_idx = (fd - bd) < 0
+        fd[rm_idx] = 0
+        bd[rm_idx] = 0
 
-          # parse = np.array(Image.open(parse_path))
-          parse = cv2.imread(parse_path, 0)
-          parse_shape = (parse > 0).astype(np.float64)
-          kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(3, 3))
-          parse_shape_erode = cv2.erode(parse_shape, kernel)
+        # parse = np.array(Image.open(parse_path))
+        parse = cv2.imread(parse_path, 0)
+        parse_shape = (parse > 0).astype(np.float64)
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(3, 3))
+        parse_shape_erode = cv2.erode(parse_shape, kernel)
 
-          rgb = np.array(Image.open(frgb_path))
-          # rgb = cv2.imread(frgb_path).cvtColor(cv2.COLOR_BGR2RGB)
-          rgb_fg = rgb * np.expand_dims(parse_shape_erode,2).astype(np.uint8)
-          rgb_dilate = dilate_rgb(rgb_fg, 2)
-          # rgb_back = np.array(Image.open(brgb_path))
-          rgb_back = inpaint_back(rgb, parse)
-          rgb_back *= np.expand_dims(parse_shape_erode,2).astype(np.uint8)
-          # rgb_back = rgb_dilate
-          rgb_back_dilate = dilate_rgb(rgb_back, 2)
-        
-          log_fn = functools.partial(log_to_wandb, run=run, key=fd_name)
-          depth2point(fd, bd, rgb, rgb_back, parse_shape=parse_shape, label='pred', out_fn=point_out_fn, log_fn=log_fn)
+        rgb = np.array(Image.open(frgb_path))
+        # rgb = cv2.imread(frgb_path).cvtColor(cv2.COLOR_BGR2RGB)
+        rgb_fg = rgb * np.expand_dims(parse_shape_erode,2).astype(np.uint8)
+        rgb_dilate = dilate_rgb(rgb_fg, 2)
+        # rgb_back = np.array(Image.open(brgb_path))
+        rgb_back = inpaint_back(rgb, parse)
+        rgb_back *= np.expand_dims(parse_shape_erode,2).astype(np.uint8)
+        # rgb_back = rgb_dilate
+        rgb_back_dilate = dilate_rgb(rgb_back, 2)
+
+        key, _ = fd_name.split("=")
+        wandb_pcd = depth2point(fd, bd, rgb, rgb_back, parse_shape=parse_shape, label='pred', out_fn=point_out_fn)
+
+        im_path, c_path = filenames[key]
+        img = wandb.Image(im_path)
+        cloth = wandb.Image(c_path)
+        rows.append([key, img, cloth, wandb_pcd])
+
+    with wandb.init(entity="retail-demo",
+        project="m3vton", config=vars(opt)) as run:
+      table = wandb.Table(rows, columns=["key", "person", "cloth", "try-on-result"])
+      run.log({"evaluation": table})
 
     print(f'The unprojected point cloud file(s) are saved to {opt.point_dst}')
     
